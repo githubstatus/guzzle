@@ -118,7 +118,7 @@ pairs:
     This option only has an effect if your handler has the
     ``GuzzleHttp\Middleware::redirect`` middleware. This middleware is added
     by default when a client is created with no handler, and is added by
-    default when creating a handler with ``GuzzleHttp\default_handler``.
+    default when creating a handler with ``GuzzleHttp\HandlerStack::create``.
 
 
 auth
@@ -737,7 +737,7 @@ progress
 
 The function accepts the following positional arguments:
 
-- the total number of bytes expected to be downloaded
+- the total number of bytes expected to be downloaded, zero if unknown
 - the number of bytes downloaded so far
 - the total number of bytes expected to be uploaded
 - the number of bytes uploaded so far

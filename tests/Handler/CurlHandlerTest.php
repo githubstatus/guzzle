@@ -7,11 +7,12 @@ use GuzzleHttp\Psr7;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Tests\Server;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \GuzzleHttp\Handler\CurlHandler
  */
-class CurlHandlerTest extends \PHPUnit_Framework_TestCase
+class CurlHandlerTest extends TestCase
 {
     protected function getHandler($options = [])
     {
@@ -36,8 +37,8 @@ class CurlHandlerTest extends \PHPUnit_Framework_TestCase
         Server::enqueue([$response, $response]);
         $a = new CurlHandler();
         $request = new Request('GET', Server::$url);
-        $a($request, []);
-        $a($request, []);
+        $this->assertInstanceOf('GuzzleHttp\Promise\FulfilledPromise', $a($request, []));
+        $this->assertInstanceOf('GuzzleHttp\Promise\FulfilledPromise', $a($request, []));
     }
 
     public function testDoesSleep()
@@ -46,9 +47,9 @@ class CurlHandlerTest extends \PHPUnit_Framework_TestCase
         Server::enqueue([$response]);
         $a = new CurlHandler();
         $request = new Request('GET', Server::$url);
-        $s = microtime(true);
+        $s = \GuzzleHttp\_current_time();
         $a($request, ['delay' => 0.1])->wait();
-        $this->assertGreaterThan(0.0001, microtime(true) - $s);
+        $this->assertGreaterThan(0.0001, \GuzzleHttp\_current_time() - $s);
     }
 
     public function testCreatesCurlErrorsWithContext()

@@ -3,8 +3,9 @@ namespace GuzzleHttp\Tests;
 
 use GuzzleHttp\TransferStats;
 use GuzzleHttp\Psr7;
+use PHPUnit\Framework\TestCase;
 
-class TransferStatsTest extends \PHPUnit_Framework_TestCase
+class TransferStatsTest extends TestCase
 {
     public function testHasData()
     {
@@ -20,8 +21,8 @@ class TransferStatsTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($request, $stats->getRequest());
         $this->assertSame($response, $stats->getResponse());
         $this->assertTrue($stats->hasResponse());
-        $this->assertEquals(['foo' => 'bar'], $stats->getHandlerStats());
-        $this->assertEquals('bar', $stats->getHandlerStat('foo'));
+        $this->assertSame(['foo' => 'bar'], $stats->getHandlerStats());
+        $this->assertSame('bar', $stats->getHandlerStat('foo'));
         $this->assertSame($request->getUri(), $stats->getEffectiveUri());
         $this->assertEquals(10.5, $stats->getTransferTime());
         $this->assertNull($stats->getHandlerErrorData());

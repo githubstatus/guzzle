@@ -2,16 +2,17 @@
 namespace GuzzleHttp\Tests\CookieJar;
 
 use GuzzleHttp\Cookie\SetCookie;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers GuzzleHttp\Cookie\SetCookie
  */
-class SetCookieTest extends \PHPUnit_Framework_TestCase
+class SetCookieTest extends TestCase
 {
     public function testInitializesDefaultValues()
     {
         $cookie = new SetCookie();
-        $this->assertEquals('/', $cookie->getPath());
+        $this->assertSame('/', $cookie->getPath());
     }
 
     public function testConvertsDateTimeMaxAgeToUnixTimestamp()
@@ -47,17 +48,17 @@ class SetCookieTest extends \PHPUnit_Framework_TestCase
         $cookie = new SetCookie($data);
         $this->assertEquals($data, $cookie->toArray());
 
-        $this->assertEquals('foo', $cookie->getName());
-        $this->assertEquals('baz', $cookie->getValue());
-        $this->assertEquals('baz.com', $cookie->getDomain());
-        $this->assertEquals('/bar', $cookie->getPath());
-        $this->assertEquals($t, $cookie->getExpires());
-        $this->assertEquals(100, $cookie->getMaxAge());
+        $this->assertSame('foo', $cookie->getName());
+        $this->assertSame('baz', $cookie->getValue());
+        $this->assertSame('baz.com', $cookie->getDomain());
+        $this->assertSame('/bar', $cookie->getPath());
+        $this->assertSame($t, $cookie->getExpires());
+        $this->assertSame(100, $cookie->getMaxAge());
         $this->assertTrue($cookie->getSecure());
         $this->assertTrue($cookie->getDiscard());
         $this->assertTrue($cookie->getHttpOnly());
-        $this->assertEquals('baz', $cookie->toArray()['foo']);
-        $this->assertEquals('bam', $cookie->toArray()['bar']);
+        $this->assertSame('baz', $cookie->toArray()['foo']);
+        $this->assertSame('bam', $cookie->toArray()['bar']);
 
         $cookie->setName('a');
         $cookie->setValue('b');
@@ -69,12 +70,12 @@ class SetCookieTest extends \PHPUnit_Framework_TestCase
         $cookie->setHttpOnly(false);
         $cookie->setDiscard(false);
 
-        $this->assertEquals('a', $cookie->getName());
-        $this->assertEquals('b', $cookie->getValue());
-        $this->assertEquals('c', $cookie->getPath());
-        $this->assertEquals('bar.com', $cookie->getDomain());
-        $this->assertEquals(10, $cookie->getExpires());
-        $this->assertEquals(200, $cookie->getMaxAge());
+        $this->assertSame('a', $cookie->getName());
+        $this->assertSame('b', $cookie->getValue());
+        $this->assertSame('c', $cookie->getPath());
+        $this->assertSame('bar.com', $cookie->getDomain());
+        $this->assertSame(10, $cookie->getExpires());
+        $this->assertSame(200, $cookie->getMaxAge());
         $this->assertFalse($cookie->getSecure());
         $this->assertFalse($cookie->getDiscard());
         $this->assertFalse($cookie->getHttpOnly());
@@ -115,6 +116,9 @@ class SetCookieTest extends \PHPUnit_Framework_TestCase
 
         $cookie->setDomain('.local');
         $this->assertTrue($cookie->matchesDomain('example.local'));
+
+        $cookie->setDomain('example.com/'); // malformed domain
+        $this->assertFalse($cookie->matchesDomain('example.com'));
     }
 
     public function pathMatchProvider()
@@ -145,7 +149,7 @@ class SetCookieTest extends \PHPUnit_Framework_TestCase
     {
         $cookie = new SetCookie();
         $cookie->setPath($cookiePath);
-        $this->assertEquals($isMatch, $cookie->matchesPath($requestPath));
+        $this->assertSame($isMatch, $cookie->matchesPath($requestPath));
     }
 
     public function cookieValidateProvider()
@@ -192,7 +196,7 @@ class SetCookieTest extends \PHPUnit_Framework_TestCase
             'HttpOnly' => true,
             'Secure' => true
         ]);
-        $this->assertEquals(
+        $this->assertSame(
             'test=123; Domain=foo.com; Path=/abc; Expires=Sun, 27 Oct 2013 23:20:08 GMT; Secure; HttpOnly',
             (string) $cookie
         );
@@ -212,10 +216,10 @@ class SetCookieTest extends \PHPUnit_Framework_TestCase
                     'Domain' => 'allseeing-i.com',
                     'Path' => '/',
                     'PHPSESSID' => '6c951590e7a9359bcedde25cda73e43c',
-                    'Max-Age' => NULL,
+                    'Max-Age' => null,
                     'Expires' => 'Sat, 26-Jul-2008 17:00:42 GMT',
-                    'Secure' => NULL,
-                    'Discard' => NULL,
+                    'Secure' => null,
+                    'Discard' => null,
                     'Name' => 'ASIHTTPRequestTestCookie',
                     'Value' => 'This+is+the+value',
                     'HttpOnly' => false
@@ -223,6 +227,7 @@ class SetCookieTest extends \PHPUnit_Framework_TestCase
             ),
             array('', []),
             array('foo', []),
+            array('; foo', []),
             array(
                 'foo="bar"',
                 [
@@ -381,7 +386,7 @@ class SetCookieTest extends \PHPUnit_Framework_TestCase
                     $this->assertEquals($p[$key], $parsed[$key], 'Comparing ' . $key . ' ' . var_export($value, true) . ' : ' . var_export($parsed, true) . ' | ' . var_export($p, true));
                 }
             } else {
-                $this->assertEquals([
+                $this->assertSame([
                     'Name' => null,
                     'Value' => null,
                     'Domain' => null,
@@ -394,5 +399,47 @@ class SetCookieTest extends \PHPUnit_Framework_TestCase
                 ], $p);
             }
         }
+    }
+
+    /**
+     * Provides the data for testing isExpired
+     *
+     * @return array
+     */
+    public function isExpiredProvider()
+    {
+        return array(
+            array(
+                'FOO=bar; expires=Thu, 01 Jan 1970 00:00:00 GMT;',
+                true,
+            ),
+            array(
+                'FOO=bar; expires=Thu, 01 Jan 1970 00:00:01 GMT;',
+                true,
+            ),
+            array(
+                'FOO=bar; expires='.date(\DateTime::RFC1123, time()+10).';',
+                false,
+            ),
+            array(
+                'FOO=bar; expires='.date(\DateTime::RFC1123, time()-10).';',
+                true,
+            ),
+            array(
+                'FOO=bar;',
+                false,
+            ),
+        );
+    }
+
+    /**
+     * @dataProvider isExpiredProvider
+     */
+    public function testIsExpired($cookie, $expired)
+    {
+        $this->assertSame(
+            $expired,
+            SetCookie::fromString($cookie)->isExpired()
+        );
     }
 }

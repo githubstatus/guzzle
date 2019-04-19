@@ -10,8 +10,9 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Promise\Promise;
 use Psr\Http\Message\RequestInterface;
+use PHPUnit\Framework\TestCase;
 
-class PoolTest extends \PHPUnit_Framework_TestCase
+class PoolTest extends TestCase
 {
     /**
      * @expectedException \InvalidArgumentException
@@ -33,6 +34,9 @@ class PoolTest extends \PHPUnit_Framework_TestCase
         $p->promise()->wait();
     }
 
+    /**
+     * @doesNotPerformAssertions
+     */
     public function testSendsAndRealizesFuture()
     {
         $c = $this->getClient();
@@ -40,6 +44,9 @@ class PoolTest extends \PHPUnit_Framework_TestCase
         $p->promise()->wait();
     }
 
+    /**
+     * @doesNotPerformAssertions
+     */
     public function testExecutesPendingWhenWaiting()
     {
         $r1 = new Promise(function () use (&$r1) { $r1->resolve(new Response()); });
@@ -110,10 +117,10 @@ class PoolTest extends \PHPUnit_Framework_TestCase
         $client = new Client(['handler' => $handler]);
         $results = Pool::batch($client, $requests);
         $this->assertCount(4, $results);
-        $this->assertEquals([0, 1, 2, 3], array_keys($results));
-        $this->assertEquals(200, $results[0]->getStatusCode());
-        $this->assertEquals(201, $results[1]->getStatusCode());
-        $this->assertEquals(202, $results[2]->getStatusCode());
+        $this->assertSame([0, 1, 2, 3], array_keys($results));
+        $this->assertSame(200, $results[0]->getStatusCode());
+        $this->assertSame(201, $results[1]->getStatusCode());
+        $this->assertSame(202, $results[2]->getStatusCode());
         $this->assertInstanceOf(ClientException::class, $results[3]);
     }
 

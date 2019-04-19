@@ -6,8 +6,9 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use PHPUnit\Framework\TestCase;
 
-class HandlerStackTest extends \PHPUnit_Framework_TestCase
+class HandlerStackTest extends TestCase
 {
     public function testSetsHandlerInCtor()
     {
@@ -17,6 +18,9 @@ class HandlerStackTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($h->hasHandler());
     }
 
+    /**
+     * @doesNotPerformAssertions
+     */
     public function testCanSetDifferentHandlerAfterConstruction()
     {
         $f = function () {};
@@ -43,8 +47,8 @@ class HandlerStackTest extends \PHPUnit_Framework_TestCase
         $builder->push($meths[3]);
         $builder->push($meths[4]);
         $composed = $builder->resolve();
-        $this->assertEquals('Hello - test123', $composed('test'));
-        $this->assertEquals(
+        $this->assertSame('Hello - test123', $composed('test'));
+        $this->assertSame(
             [['a', 'test'], ['b', 'test1'], ['c', 'test12']],
             $meths[0]
         );
@@ -59,8 +63,8 @@ class HandlerStackTest extends \PHPUnit_Framework_TestCase
         $builder->unshift($meths[3]);
         $builder->unshift($meths[4]);
         $composed = $builder->resolve();
-        $this->assertEquals('Hello - test321', $composed('test'));
-        $this->assertEquals(
+        $this->assertSame('Hello - test321', $composed('test'));
+        $this->assertSame(
             [['c', 'test'], ['b', 'test3'], ['a', 'test32']],
             $meths[0]
         );
@@ -78,7 +82,7 @@ class HandlerStackTest extends \PHPUnit_Framework_TestCase
         $builder->push($meths[2]);
         $builder->remove($meths[3]);
         $composed = $builder->resolve();
-        $this->assertEquals('Hello - test1131', $composed('test'));
+        $this->assertSame('Hello - test1131', $composed('test'));
     }
 
     public function testCanPrintMiddleware()
@@ -159,10 +163,10 @@ class HandlerStackTest extends \PHPUnit_Framework_TestCase
             'allow_redirects' => true,
             'cookies' => $jar
         ])->wait();
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertSame(200, $response->getStatusCode());
         $lastRequest = $mock->getLastRequest();
-        $this->assertEquals('http://foo.com/baz', (string) $lastRequest->getUri());
-        $this->assertEquals('foo=bar', $lastRequest->getHeaderLine('Cookie'));
+        $this->assertSame('http://foo.com/baz', (string) $lastRequest->getUri());
+        $this->assertSame('foo=bar', $lastRequest->getHeaderLine('Cookie'));
     }
 
     private function getFunctions()

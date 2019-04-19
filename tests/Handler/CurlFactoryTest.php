@@ -8,11 +8,12 @@ use GuzzleHttp\Handler;
 use GuzzleHttp\Psr7;
 use GuzzleHttp\TransferStats;
 use Psr\Http\Message\ResponseInterface;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \GuzzleHttp\Handler\CurlFactory
  */
-class CurlFactoryTest extends \PHPUnit_Framework_TestCase
+class CurlFactoryTest extends TestCase
 {
     public static function setUpBeforeClass()
     {
@@ -47,19 +48,19 @@ class CurlFactoryTest extends \PHPUnit_Framework_TestCase
         $this->assertInternalType('array', $result->headers);
         $this->assertSame($stream, $result->sink);
         curl_close($result->handle);
-        $this->assertEquals('PUT', $_SERVER['_curl'][CURLOPT_CUSTOMREQUEST]);
-        $this->assertEquals(
+        $this->assertSame('PUT', $_SERVER['_curl'][CURLOPT_CUSTOMREQUEST]);
+        $this->assertSame(
             'http://127.0.0.1:8126/',
             $_SERVER['_curl'][CURLOPT_URL]
         );
         // Sends via post fields when the request is small enough
-        $this->assertEquals('testing', $_SERVER['_curl'][CURLOPT_POSTFIELDS]);
+        $this->assertSame('testing', $_SERVER['_curl'][CURLOPT_POSTFIELDS]);
         $this->assertEquals(0, $_SERVER['_curl'][CURLOPT_RETURNTRANSFER]);
         $this->assertEquals(0, $_SERVER['_curl'][CURLOPT_HEADER]);
-        $this->assertEquals(150, $_SERVER['_curl'][CURLOPT_CONNECTTIMEOUT]);
+        $this->assertSame(150, $_SERVER['_curl'][CURLOPT_CONNECTTIMEOUT]);
         $this->assertInstanceOf('Closure', $_SERVER['_curl'][CURLOPT_HEADERFUNCTION]);
         if (defined('CURLOPT_PROTOCOLS')) {
-            $this->assertEquals(
+            $this->assertSame(
                 CURLPROTO_HTTP | CURLPROTO_HTTPS,
                 $_SERVER['_curl'][CURLOPT_PROTOCOLS]
             );
@@ -339,7 +340,10 @@ class CurlFactoryTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('gzip', $sent->getHeaderLine('Accept-Encoding'));
         $this->assertEquals('test', (string) $response->getBody());
         $this->assertFalse($response->hasHeader('content-encoding'));
-        $this->assertTrue(!$response->hasHeader('content-length') || $response->getHeaderLine('content-length') == $response->getBody()->getSize());
+        $this->assertTrue(
+            !$response->hasHeader('content-length') ||
+            $response->getHeaderLine('content-length') == $response->getBody()->getSize()
+        );
     }
 
     public function testDoesNotForceDecode()
@@ -404,7 +408,7 @@ class CurlFactoryTest extends \PHPUnit_Framework_TestCase
             'sink'           => $tmpfile,
         ]);
         $response->wait();
-        $this->assertEquals('test', file_get_contents($tmpfile));
+        $this->assertStringEqualsFile($tmpfile, 'test');
         unlink($tmpfile);
     }
 
@@ -508,11 +512,11 @@ class CurlFactoryTest extends \PHPUnit_Framework_TestCase
         ], 'test');
         $handler = new Handler\CurlMultiHandler();
         $response = $handler($request, [])->wait();
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('OK', $response->getReasonPhrase());
-        $this->assertEquals('Hello', $response->getHeaderLine('Test'));
-        $this->assertEquals('4', $response->getHeaderLine('Content-Length'));
-        $this->assertEquals('test', (string) $response->getBody());
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('OK', $response->getReasonPhrase());
+        $this->assertSame('Hello', $response->getHeaderLine('Test'));
+        $this->assertSame('4', $response->getHeaderLine('Content-Length'));
+        $this->assertSame('test', (string) $response->getBody());
     }
 
     /**
@@ -556,7 +560,7 @@ class CurlFactoryTest extends \PHPUnit_Framework_TestCase
         $request = new Psr7\Request('PUT', Server::$url, [], $bd);
         $f->create($request, []);
         $this->assertEquals(1, $_SERVER['_curl'][CURLOPT_UPLOAD]);
-        $this->assertTrue(is_callable($_SERVER['_curl'][CURLOPT_READFUNCTION]));
+        $this->assertInternalType('callable', $_SERVER['_curl'][CURLOPT_READFUNCTION]);
     }
 
     /**
@@ -652,9 +656,9 @@ class CurlFactoryTest extends \PHPUnit_Framework_TestCase
         ]);
 
         $response = $promise->wait();
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('bar', $response->getHeaderLine('X-Foo'));
-        $this->assertEquals('abc 123', (string) $response->getBody());
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('bar', $response->getHeaderLine('X-Foo'));
+        $this->assertSame('abc 123', (string) $response->getBody());
     }
 
     public function testInvokesOnStatsOnSuccess()
@@ -670,17 +674,18 @@ class CurlFactoryTest extends \PHPUnit_Framework_TestCase
             }
         ]);
         $response = $promise->wait();
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals(200, $gotStats->getResponse()->getStatusCode());
-        $this->assertEquals(
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(200, $gotStats->getResponse()->getStatusCode());
+        $this->assertSame(
             Server::$url,
             (string) $gotStats->getEffectiveUri()
         );
-        $this->assertEquals(
+        $this->assertSame(
             Server::$url,
             (string) $gotStats->getRequest()->getUri()
         );
         $this->assertGreaterThan(0, $gotStats->getTransferTime());
+        $this->assertArrayHasKey('appconnect_time', $gotStats->getHandlerStats());
     }
 
     public function testInvokesOnStatsOnError()
@@ -697,16 +702,17 @@ class CurlFactoryTest extends \PHPUnit_Framework_TestCase
         ]);
         $promise->wait(false);
         $this->assertFalse($gotStats->hasResponse());
-        $this->assertEquals(
+        $this->assertSame(
             'http://127.0.0.1:123',
-            $gotStats->getEffectiveUri()
+            (string) $gotStats->getEffectiveUri()
         );
-        $this->assertEquals(
+        $this->assertSame(
             'http://127.0.0.1:123',
-            $gotStats->getRequest()->getUri()
+            (string) $gotStats->getRequest()->getUri()
         );
         $this->assertInternalType('float', $gotStats->getTransferTime());
         $this->assertInternalType('int', $gotStats->getHandlerErrorData());
+        $this->assertArrayHasKey('appconnect_time', $gotStats->getHandlerStats());
     }
 
     public function testRewindsBodyIfPossible()
@@ -738,5 +744,14 @@ class CurlFactoryTest extends \PHPUnit_Framework_TestCase
         $factory->create($req, []);
 
         $this->assertSame(1024 * 1024, $body->tell());
+    }
+
+    public function testRelease()
+    {
+        $factory = new CurlFactory(1);
+        $easyHandle = new EasyHandle();
+        $easyHandle->handle = curl_init();
+
+        $this->assertEmpty($factory->release($easyHandle));
     }
 }

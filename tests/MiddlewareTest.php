@@ -9,15 +9,14 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\MessageFormatter;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Promise\PromiseInterface;
-use GuzzleHttp\Psr7;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Log\LoggerInterface;
-use Psr\Log\LoggerTrait;
+use PHPUnit\Framework\TestCase;
+use Psr\Log\Test\TestLogger;
 
-class MiddlewareTest extends \PHPUnit_Framework_TestCase
+class MiddlewareTest extends TestCase
 {
     public function testAddsCookiesToRequests()
     {
@@ -50,9 +49,9 @@ class MiddlewareTest extends \PHPUnit_Framework_TestCase
         $h = new MockHandler([new Response(404)]);
         $f = $m($h);
         $p = $f(new Request('GET', 'http://foo.com'), ['http_errors' => true]);
-        $this->assertEquals('pending', $p->getState());
+        $this->assertSame('pending', $p->getState());
         $p->wait();
-        $this->assertEquals('rejected', $p->getState());
+        $this->assertSame('rejected', $p->getState());
     }
 
     /**
@@ -64,9 +63,9 @@ class MiddlewareTest extends \PHPUnit_Framework_TestCase
         $h = new MockHandler([new Response(500)]);
         $f = $m($h);
         $p = $f(new Request('GET', 'http://foo.com'), ['http_errors' => true]);
-        $this->assertEquals('pending', $p->getState());
+        $this->assertSame('pending', $p->getState());
         $p->wait();
-        $this->assertEquals('rejected', $p->getState());
+        $this->assertSame('rejected', $p->getState());
     }
 
     /**
@@ -82,12 +81,12 @@ class MiddlewareTest extends \PHPUnit_Framework_TestCase
         $p1->wait();
         $p2->wait();
         $this->assertCount(2, $container);
-        $this->assertEquals(200, $container[0]['response']->getStatusCode());
-        $this->assertEquals(201, $container[1]['response']->getStatusCode());
-        $this->assertEquals('GET', $container[0]['request']->getMethod());
-        $this->assertEquals('HEAD', $container[1]['request']->getMethod());
-        $this->assertEquals('bar', $container[0]['options']['headers']['foo']);
-        $this->assertEquals('baz', $container[1]['options']['headers']['foo']);
+        $this->assertSame(200, $container[0]['response']->getStatusCode());
+        $this->assertSame(201, $container[1]['response']->getStatusCode());
+        $this->assertSame('GET', $container[0]['request']->getMethod());
+        $this->assertSame('HEAD', $container[1]['request']->getMethod());
+        $this->assertSame('bar', $container[0]['options']['headers']['foo']);
+        $this->assertSame('baz', $container[1]['options']['headers']['foo']);
     }
 
     public function getHistoryUseCases()
@@ -107,7 +106,7 @@ class MiddlewareTest extends \PHPUnit_Framework_TestCase
         $f = $m($h);
         $f($request, [])->wait(false);
         $this->assertCount(1, $container);
-        $this->assertEquals('GET', $container[0]['request']->getMethod());
+        $this->assertSame('GET', $container[0]['request']->getMethod());
         $this->assertInstanceOf(RequestException::class, $container[0]['error']);
     }
 
@@ -136,16 +135,16 @@ class MiddlewareTest extends \PHPUnit_Framework_TestCase
         $b->push($m);
         $comp = $b->resolve();
         $p = $comp(new Request('GET', 'http://foo.com'), []);
-        $this->assertEquals('123', implode('', $calls));
+        $this->assertSame('123', implode('', $calls));
         $this->assertInstanceOf(PromiseInterface::class, $p);
-        $this->assertEquals(200, $p->wait()->getStatusCode());
+        $this->assertSame(200, $p->wait()->getStatusCode());
     }
 
     public function testMapsRequest()
     {
         $h = new MockHandler([
             function (RequestInterface $request, array $options) {
-                $this->assertEquals('foo', $request->getHeaderLine('Bar'));
+                $this->assertSame('foo', $request->getHeaderLine('Bar'));
                 return new Response(200);
             }
         ]);
@@ -168,62 +167,51 @@ class MiddlewareTest extends \PHPUnit_Framework_TestCase
         $comp = $stack->resolve();
         $p = $comp(new Request('PUT', 'http://www.google.com'), []);
         $p->wait();
-        $this->assertEquals('foo', $p->wait()->getHeaderLine('Bar'));
+        $this->assertSame('foo', $p->wait()->getHeaderLine('Bar'));
     }
 
     public function testLogsRequestsAndResponses()
     {
         $h = new MockHandler([new Response(200)]);
         $stack = new HandlerStack($h);
-        $logger = new Logger();
+        $logger = new TestLogger();
         $formatter = new MessageFormatter();
         $stack->push(Middleware::log($logger, $formatter));
         $comp = $stack->resolve();
         $p = $comp(new Request('PUT', 'http://www.google.com'), []);
         $p->wait();
-        $this->assertContains('"PUT / HTTP/1.1" 200', $logger->output);
+        $this->assertCount(1, $logger->records);
+        $this->assertContains('"PUT / HTTP/1.1" 200', $logger->records[0]['message']);
     }
 
     public function testLogsRequestsAndResponsesCustomLevel()
     {
         $h = new MockHandler([new Response(200)]);
         $stack = new HandlerStack($h);
-        $logger = new Logger();
+        $logger = new TestLogger();
         $formatter = new MessageFormatter();
         $stack->push(Middleware::log($logger, $formatter, 'debug'));
         $comp = $stack->resolve();
         $p = $comp(new Request('PUT', 'http://www.google.com'), []);
         $p->wait();
-        $this->assertContains('"PUT / HTTP/1.1" 200', $logger->output);
-        $this->assertContains('[debug]', $logger->output);
+        $this->assertCount(1, $logger->records);
+        $this->assertContains('"PUT / HTTP/1.1" 200', $logger->records[0]['message']);
+        $this->assertSame('debug', $logger->records[0]['level']);
     }
 
     public function testLogsRequestsAndErrors()
     {
         $h = new MockHandler([new Response(404)]);
         $stack = new HandlerStack($h);
-        $logger = new Logger();
+        $logger = new TestLogger();
         $formatter = new MessageFormatter('{code} {error}');
         $stack->push(Middleware::log($logger, $formatter));
         $stack->push(Middleware::httpErrors());
         $comp = $stack->resolve();
         $p = $comp(new Request('PUT', 'http://www.google.com'), ['http_errors' => true]);
         $p->wait(false);
-        $this->assertContains('PUT http://www.google.com', $logger->output);
-        $this->assertContains('404 Not Found', $logger->output);
-    }
-}
-
-/**
- * @internal
- */
-class Logger implements LoggerInterface
-{
-    use LoggerTrait;
-    public $output;
-
-    public function log($level, $message, array $context = [])
-    {
-        $this->output .= "[{$level}] {$message}\n";
+        $this->assertCount(1, $logger->records);
+        $this->assertContains('PUT http://www.google.com', $logger->records[0]['message']);
+        $this->assertContains('404 Not Found', $logger->records[0]['message']);
     }
 }
